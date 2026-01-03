@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VCP GRASS | Reserva Premium</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.34/dist/lenis.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'vcp-verde': '#1B4332',
+                        'vcp-lima': '#74C69D',
+                        'vcp-accion': '#FFB703',
+                        'vcp-fondo': '#020a07',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #020a07; color: white; overflow-x: hidden; }
+        .hero-bg { position: fixed; inset: 0; z-index: -2; background: url('https://images.unsplash.com/photo-1558449028-b53a39d100fc?q=80&w=1920&auto=format&fit=crop') no-repeat center center; background-size: cover; }
+        .hero-overlay { position: fixed; inset: 0; z-index: -1; background: linear-gradient(to bottom, rgba(2, 10, 7, 0.85), rgba(2, 10, 7, 0.98)); }
+        #bg-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.4; }
+        .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(40px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3rem; }
+        input { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
+        .reveal { opacity: 0; transform: translateY(40px); }
+        ::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+<body class="lenis-smooth">
+
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="success-screen" class="hidden fixed inset-0 z-[100] bg-vcp-fondo/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
+        <div class="glass-panel p-10 max-w-sm w-full border-vcp-lima/30">
+            <div class="text-6xl mb-6">✅</div>
+            <h2 class="text-3xl font-black text-vcp-lima uppercase italic">Servicio Pagado</h2>
+            <p class="text-gray-400 mt-4 text-sm">El pago total ha sido verificado. Enviando confirmación al equipo...</p>
+            <button onclick="location.reload()" class="mt-8 w-full py-4 bg-white text-vcp-fondo rounded-2xl font-black uppercase tracking-widest">Listo</button>
+        </div>
+    </div>
+
+    <header class="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center">
+        <div class="flex flex-col">
+            <span class="font-black italic text-2xl tracking-tighter leading-none">VCP <span class="text-vcp-lima">GRASS</span></span>
+            <span class="text-[8px] font-bold tracking-[0.4em] uppercase text-vcp-lima">Carlos Paz 2026</span>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-xl mx-auto px-6 pt-32 pb-32">
+        
+        <section class="mb-16 reveal">
+            <h2 class="text-6xl font-black uppercase italic leading-[0.9] tracking-tighter mb-6">
+                Tu jardín <span class="text-vcp-lima">impecable,</span><br>sin mover un dedo.
+            </h2>
+            <p class="text-gray-300 font-medium text-lg leading-snug">Reserva y abona tu Corte Total de forma anticipada. Servicio garantizado.</p>
+        </section>
+
+        <section class="glass-panel p-8 space-y-8 reveal shadow-2xl">
+            
+            <div>
+                <label class="block text-[10px] font-black uppercase text-vcp-lima mb-4 tracking-[0.3em] ml-2">Superficie del Lote</label>
+                <div class="relative">
+                    <input type="number" id="m2-input" oninput="calcularVCP()" placeholder="Ej: 500" class="w-full p-7 rounded-[2rem] font-black text-4xl outline-none">
+                    <span class="absolute right-8 top-1/2 -translate-y-1/2 font-black text-white/10 text-xl">M²</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="toggleBtn('alto')" id="opt-alto" class="p-6 rounded-[2rem] border border-white/5 font-black text-[10px] uppercase tracking-widest text-center transition-all">
+                    Pasto Muy Alto<br><span class="text-vcp-lima">+40% Intensivo</span>
+                </button>
+                <button onclick="toggleBtn('brosa')" id="opt-brosa" class="p-6 rounded-[2rem] border border-white/5 font-black text-[10px] uppercase tracking-widest text-center transition-all">
+                    Retiro de Brosa<br><span class="text-vcp-lima">Limpieza Final</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <label class="block text-[10px] font-black uppercase text-vcp-lima mb-2 tracking-[0.3em] ml-2">Día del Servicio</label>
+                <input type="date" id="service-date" class="w-full p-5 rounded-2xl font-bold">
+                <button onclick="getGPS()" id="gps-btn" class="w-full py-5 bg-white/5 rounded-2xl font-black text-[10px] uppercase border border-white/10 flex items-center justify-center gap-3">
+                    <span id="gps-dot" class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    <span id="gps-text">Sincronizar Ubicación GPS</span>
+                </button>
+            </div>
+
+            <div class="bg-vcp-verde/60 border border-vcp-lima/20 rounded-[2.5rem] p-8 text-center">
+                <p class="text-[9px] font-black text-vcp-lima uppercase tracking-widest mb-1">Monto Total a Abonar</p>
+                <h3 id="total-text" class="text-6xl font-black tracking-tighter leading-none">$0</h3>
+            </div>
+
+            <div class="space-y-3">
+                <input type="text" id="cust-name" placeholder="Nombre completo" class="w-full p-5 rounded-2xl font-bold">
+                <input type="text" id="cust-addr" placeholder="Dirección en Carlos Paz" class="w-full p-5 rounded-2xl font-bold">
+            </div>
+
+            <button onclick="procesarReserva()" class="w-full py-7 bg-vcp-accion text-vcp-fondo rounded-[2rem] font-black text-xl uppercase tracking-tighter shadow-lg hover:scale-[1.02] transition-transform">
+                Pagar y Confirmar Turno
+            </button>
+        </section>
+    </main>
+
+    <script>
+        const WHATSAPP_VCP = "5493541214553";
+        const MI_LINK_PAGO_MP = "https://mpago.la/TU_LINK"; 
+        
+        let extraAlto = false;
+        let extraBrosa = false;
+        let coordsGPS = "No enviada";
+
+        function toggleBtn(tipo) {
+            if(tipo === 'alto') extraAlto = !extraAlto;
+            if(tipo === 'brosa') extraBrosa = !extraBrosa;
+            document.getElementById(`opt-${tipo}`).classList.toggle('bg-vcp-lima');
+            document.getElementById(`opt-${tipo}`).classList.toggle('text-vcp-fondo');
+            calcularVCP();
+        }
+
+        function getGPS() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    coordsGPS = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                    document.getElementById('gps-text').innerText = "Ubicación Vinculada ✓";
+                    document.getElementById('gps-dot').classList.replace('bg-red-500', 'bg-green-500');
+                });
+            }
+        }
+
+        function calcularVCP() {
+            let m2 = parseFloat(document.getElementById('m2-input').value) || 0;
+            let total = Math.max(25000, m2 * 850);
+            if(extraAlto) total *= 1.4;
+            if(extraBrosa) total += 8000;
+            document.getElementById('total-text').innerText = `$${Math.round(total).toLocaleString()}`;
+        }
+
+        function procesarReserva() {
+            const m2 = document.getElementById('m2-input').value;
+            const name = document.getElementById('cust-name').value;
+            const addr = document.getElementById('cust-addr').value;
+            const date = document.getElementById('service-date').value;
+
+            if(!m2 || !name || !addr || !date) return alert("Completa todos los campos para continuar.");
+
+            const data = {
+                nombre: name,
+                direccion: addr,
+                fecha: date,
+                metros: m2,
+                total: document.getElementById('total-text').innerText,
+                gps: coordsGPS,
+                detalles: `${extraAlto ? 'Pasto Alto (+40%) ' : ''}${extraBrosa ? 'Con Retiro de Brosa' : ''}`
+            };
+
+            localStorage.setItem('pending_vcp_order', JSON.stringify(data));
+            window.location.href = MI_LINK_PAGO_MP;
+        }
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('status') === 'approved' || params.get('payment_id')) {
+                const order = JSON.parse(localStorage.getItem('pending_vcp_order'));
+                if(order) {
+                    const msg = `*🌿 PAGO COMPLETO CONFIRMADO*\n\n` +
+                                `*Cliente:* ${order.nombre}\n` +
+                                `*Ubicación:* ${order.direccion}\n` +
+                                `*Fecha:* ${order.fecha}\n` +
+                                `*Superficie:* ${order.metros} m²\n` +
+                                `*Ubicación GPS:* ${order.gps}\n\n` +
+                                `*TOTAL PAGADO:* ${order.total} ✅\n` +
+                                `*SERVICIOS:* ${order.detalles}`;
+                    
+                    window.open(`https://wa.me/${WHATSAPP_VCP}?text=${encodeURIComponent(msg)}`, '_blank');
+                    document.getElementById('success-screen').classList.remove('hidden');
+                    localStorage.removeItem('pending_vcp_order');
+                }
+            }
+        };
+
+        // Animación de Fondo
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let dots = [];
+        function init() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            dots = Array(40).fill().map(() => ({
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                vy: Math.random() * 0.4 + 0.1, size: Math.random() * 2
+            }));
+        }
+        function draw() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.fillStyle = '#74C69D';
+            dots.forEach(d => { d.y -= d.vy; if(d.y < 0) d.y = canvas.height; ctx.beginPath(); ctx.arc(d.x, d.y, d.size, 0, Math.PI*2); ctx.fill(); });
+            requestAnimationFrame(draw);
+        }
+        init(); draw();
+
+        gsap.to(".reveal", { opacity: 1, y: 0, duration: 1.5, stagger: 0.3, ease: "expo.out" });
+        const lenis = new Lenis();
+        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+        requestAnimationFrame(raf);
+    </script>
+</body>
+</html>
